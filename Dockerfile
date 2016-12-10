@@ -20,6 +20,9 @@ RUN ./repo.sh
 
 ENV JAVA_CMD $JAVA_HOME/bin/java
 
+#path must be set when running container
+ENV ATHENA_S3_PATH s3:// 
+
 RUN lein deps
 RUN lein uberjar
 
