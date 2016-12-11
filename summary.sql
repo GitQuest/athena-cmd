@@ -8,8 +8,8 @@ WITH t1 AS
       CAST(json_extract(t,'$["aad.issoftdeleted"]') AS BOOLEAN) as sd
       FROM rmaz_backups 
       CROSS JOIN UNNEST(value) AS x (t)
-      WHERE when_done='2016-12-09T00:11:58.675973Z' AND 
-            tenant_id='a5263d55-d959-4391-a162-594b1e5ec7d3'),
+      WHERE when_done='2016-12-11T11:11:51.404513Z' AND 
+            tenant_id='72d02b02-8735-4d28-84f7-7d20b4d7585d'),
       
     links AS (
     
