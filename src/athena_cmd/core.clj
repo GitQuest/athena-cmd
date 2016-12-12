@@ -8,26 +8,36 @@
 
 (use '[clojure.pprint :only [print-table]])
 
-(def athenaURI 
-  "jdbc:awsathena://athena.us-east-1.amazonaws.com:443")
+(def log_path 
+  (.getAbsolutePath 
+    (java.io.File/createTempFile "athena" ".log")))
 
-(def info (Properties.))
+(defn get_properties
+  [folder]
+  (let [info (Properties.)
+        s3_path_env "ATHENA_S3_PATH"
+        s3_path (str (System/getenv s3_path_env))]
 
-(def s3_path_env "ATHENA_S3_PATH")
-(def s3_path (System/getenv s3_path_env))
+    (doto info 
 
-(.put info "s3_staging_dir" 
-      (if s3_path s3_path 
-        (throw (Exception. (str s3_path_env " is not set.")))))
+      (.put "s3_staging_dir" 
+        (if s3_path (str s3_path folder) 
+          (throw (Exception. (str s3_path_env " is not set.")))))
 
-(.put info "aws_credentials_provider_class"
-           "com.amazonaws.auth.DefaultAWSCredentialsProviderChain")
+      (.put "aws_credentials_provider_class"
+            "com.amazonaws.auth.DefaultAWSCredentialsProviderChain")
 
-(.put info "log_path"
-           "/tmp/athenajdbc.log")
+      (.put "log_path" log_path)) 
 
-(def conn (DriverManager/getConnection athenaURI info))
-(def stmt (.createStatement conn))
+          info))
+
+(defn get_stmt 
+  [folder] 
+  (let [athenaURI 
+        "jdbc:awsathena://athena.us-east-1.amazonaws.com:443"
+        info (get_properties folder)
+        conn (DriverManager/getConnection athenaURI info)
+        stmt (.createStatement conn)] [stmt info]))
 
 (defn read_row 
   [rs]
@@ -41,16 +51,21 @@
                 (range 1 (+ 1 cnt)))))
 
 (defn exec
-  [query]
-  (let [rs (.executeQuery stmt query)
-        m (.getMetaData rs)]
 
-    (loop [
-           res []
+  [query & {:keys [folder]
+            :or {folder ""}}]
+
+  (let [[stmt info] (get_stmt folder)
+        rs (.executeQuery stmt query)
+        f (get info "log_path")]
+
+    (loop [res []
            more (.next rs)]
 
       (if-not more 
+
         res
+
         (do 
           (recur 
             (conj res (read_row rs))
